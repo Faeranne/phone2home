@@ -51,16 +51,24 @@ app.listen(3000, function(){
   console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
 });
 
-var server = io
+var brower = io
   .of('/browser')
   .on('connection',function(socket){
-    socket.on('setup', function(event){
+    socket.on('verify', function(event){
       browserid_verify(event.assertion, socket);
-      //var url='http://local.projectmakeit.com:3000/phone2home/mobilesetup/'+id+'/'+code;
-      //socket.emit('finish',{id:id,code:code});
-      //QRCode.toDataURL(url, function(err,uri){
-      //  socket.emit('qrcode', uri);
-      //});
+    });
+    socket.on('setup', function(event){
+        idset.findOne({"id":event.id},function (err,data){
+        for(code in data.codeset){
+          if(event.code==code){
+            if(!servers[event.id]){
+              servers[event.id]=[];
+            }
+            servers[event.id].push(socket);
+            break;
+          }
+        }
+      });
     });
     socket.on('qrcode', function(event){
       var code = randomstring.generate();
@@ -69,17 +77,31 @@ var server = io
       QRCode.toDataURL(url, function(err,uri){
         socket.emit('qrcode', uri);
       });
-      server[id].
+    });
   });
-var client = io
+var phone = io
   .of('/phone')
   .on('connection', function(socket){
-    var id=null;
-    socket.on('register', function(event){
-      
+    var id;
+    socket.on('setup', function(event){
+      idset.findOne({"id":event.id},function (err,data){
+        for(code in data.codeset){
+          if(event.code==code){
+            if(!servers[event.id]){
+              servers[event.id]=[];
+            }
+            id=event.id;
+            break;
+          }
+        }
+      });
     });
     socket.on('switch', function(url){
-      servers[id].browser.emit('switch',url);
+      if(id){
+        for(linkage in servers[id]){        
+          linkage.emit('switch',url);
+        }
+      }
     });
   });
 function browserid_verify(assertion, socket){
@@ -112,8 +134,13 @@ function browserid_verify(assertion, socket){
             var id = randomstring.generate();
             data={"email":email, "id":id, codeset:[code]};
             idset.update({"email":email},data,{upsert:true},function(err,data){});
+            socket.emit('verified',{id:id,code:code,email:email});
           }else{
-            data.codeset
+            data.codeset.push(code);
+            socket.emit('added',{id:id,code:code,email:email});
+            idset.update({"email":email},data,{upsert:true},function(err,data){});
+          }
+        });
       }
       console.log('BODY: ' + chunk);
     });
