@@ -1,0 +1,24 @@
+img(id='qrcode')
+script(src="/socket.io/socket.io.js")
+script
+  var socket=io.connect('/browser');
+  (function(){
+    socket.on('finish',function(event){
+      localStorage.setItem('id',event.id);
+      localStorage.setItem('code',event.code);
+    });
+    socket.on('switch', function(url){
+      window.open(url);
+    });
+    socket.on('qrcode',function(uri){
+      document.getElementById('qrcode').src=uri;
+    });
+    if(!localStorage.getItem('id')){
+      socket.emit('setup');
+      return;
+    }
+    var id = localStorage.getItem('id');
+    var code = localStorage.getItem('code');
+    socket.emit('register',{id:id,code:code});
+  })()
+
