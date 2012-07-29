@@ -1,19 +1,18 @@
-img(id='qrcode')
 script(src="/socket.io/socket.io.js")
 script
   var socket=io.connect('/browser');
   (function(){
+    socket.on('switch', function(url){
+      console.log(url);
+      
+      window.open(url);
+    });
     if(!localStorage.getItem('id')){
-      socket.emit('setup');
+      window.href='./browsersetup/';
+      return;
     }
     var id = localStorage.getItem('id');
     var code = localStorage.getItem('code');
-    socket.emit('register',{id:id,code:code});
-    socket.on('switch', function(url){
-      window.open(url);
-    });
-    socket.on('qrcode',function(uri){
-      document.getElementById('qrcode').src=uri;
-    });
+    socket.emit('link',{id:id,code:code});
   })()
 

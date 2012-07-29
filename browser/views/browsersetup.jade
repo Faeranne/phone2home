@@ -1,0 +1,69 @@
+img(id='qrcode')
+script(src="/socket.io/socket.io.js")
+script(src="https://browserid.org/include.js")
+input(id='name')
+a(href='#', id='browserid', title='Connect with BrowserID')
+  img(src='/images/sign_in_red.png', alt='Sign-In')
+a(href='#', id='addphone')
+  Add a phone
+a(href='#', id='remove')
+  Remove this browser
+script
+  (function(){
+    var socket=io.connect('/browser');
+    var id;
+    var code;
+    var gotAssertion = function(assertion){
+      var name=document.getElementById('name').value;
+      if(!name){
+        name="Unset-browser";
+      }
+      socket.emit('verify',{assertion:assertion,name:name})
+    }
+    socket.on('finish',function(event){
+      localStorage.setItem('id',event.id);
+      localStorage.setItem('code',event.code);
+    });
+    socket.on('qrcode',function(uri){
+      document.getElementById('qrcode').src=uri;
+    });
+    document.getElementById('browserid').onclick=function(){
+      navigator.id.get(gotAssertion);
+    };
+    if(localStorage.getItem('id')){
+      id=localStorage.getItem('id');
+      code=localStorage.getItem('code');
+    }
+    document.getElementById('addphone').onclick=function(){
+      if(id){
+        var name=document.getElementById('name').value;
+        if(!name){
+          name="Unset-phone";
+        }
+        socket.emit('qrcode',{id:id,name:name});
+      }else{
+        alert('You need to link the browser before doing this.');
+      }
+    };
+    document.getElementById('remove').onclick=function(){
+      localStorage.removeItem('id');
+      localStorage.removeItem('code');
+    };
+    socket.on('verified',function(event){
+      id=event.id;
+      localStorage.setItem('id',event.id);
+      localStorage.setItem('code',event.code);
+    });
+    socket.on('added',function(event){
+      id=event.id;
+      localStorage.setItem('id',event.id);
+      localStorage.setItem('code',event.code);
+    });
+    if(id){
+      socket.emit('link',{id:id,code:code});
+      console.log(id);
+    }else{
+      console.log('no id');
+    }
+    
+  })()

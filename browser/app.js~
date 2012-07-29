@@ -7,7 +7,8 @@ var QRCode = require('qrcode');
 var express = require('express')
   , routes = require('./routes')
   , mongodb = require('mongodb')
-  , repl = require('repl');
+  , repl = require('repl')
+  , https = require('https');
 var app = module.exports = express.createServer();
 var io = require('socket.io').listen(app);
 var servers = {};
@@ -18,7 +19,7 @@ var DBPASS = process.env.PASS;
 var DBUSER = process.env.DBUSER;
 var DBNAME = process.env.DB;
 // Configuration
-var server = new mongodb.Server(DBSERVER,31617, {});
+var server = new mongodb.Server(DBSERVER,35907, {});
 var db = new mongodb.Db(DBNAME, server, {});
 app.configure(function(){
   app.set('views', __dirname + '/views');
@@ -32,7 +33,7 @@ db.open(function(err,res){
   db.authenticate(DBUSER,DBPASS,function(err,res){
   });
 });
-var idset = extra.db.collection('accounts');
+var idset = db.collection('accounts');
 app.configure('development', function(){
   app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 });
@@ -44,7 +45,8 @@ app.configure('production', function(){
 // Routes
 
 app.get('/phone2home/browser/', routes.browser);
-app.get('/phone2home/mobilesetup/:id/:code/', routes.mobilesetup);
+app.get('/phone2home/browsersetup/', routes.browsersetup);
+app.get('/phone2home/mobilesetup/:id/:code/:name/', routes.mobilesetup);
 app.get('/phone2home/mobile/:url', routes.mobile);
 
 app.listen(3000, function(){
@@ -55,75 +57,107 @@ var brower = io
   .of('/browser')
   .on('connection',function(socket){
     socket.on('verify', function(event){
-      browserid_verify(event.assertion, socket);
+      browserid_verify(event.assertion, event.name, socket);
     });
-    socket.on('setup', function(event){
+    socket.on('link', function(event){
+        console.log(event);
+        
         idset.findOne({"id":event.id},function (err,data){
+        if(!data){
+          console.log("no data");
+          return;
+        }
         for(code in data.codeset){
-          if(event.code==code){
-            if(!servers[event.id]){
-              servers[event.id]=[];
+          console.log(data.codeset[code].code);
+          if(event.code==data.codeset[code].code){
+            if(!servers[data.id]){
+              servers[data.id]=[];
             }
-            servers[event.id].push(socket);
+            servers[data.id].push(socket);
+            console.log(data.id);
+            socket.set('id', data.id);
             break;
           }
         }
+        console.log('check done');
+        
       });
     });
     socket.on('qrcode', function(event){
-      var code = randomstring.generate();
+      var name = event.name;
       var id = event.id;
-      var url='http://local.projectmakeit.com:3000/phone2home/mobilesetup/'+id+'/'+code;
+      var code = randomstring.generate();
+      console.log(id);
+      var url='http://local.projectmakeit.com:3000/phone2home/mobilesetup/'+id+'/'+code+'/'+name+'/';
       QRCode.toDataURL(url, function(err,uri){
         socket.emit('qrcode', uri);
       });
+      idset.findOne({"id":id},function (err,data){
+        console.log(data);
+        data.codeset.push({code:code,name:name});
+        socket.emit('included');
+        idset.update({"id":id},data,{upsert:true},function(err,data){});
+      });
+    });
   });
 var phone = io
   .of('/phone')
   .on('connection', function(socket){
-    var id;
     socket.on('setup', function(event){
       idset.findOne({"id":event.id},function (err,data){
         for(code in data.codeset){
-          if(event.code==code){
+          console.log(data.codeset[code].code);
+          if(event.code==data.codeset[code].code){
             if(!servers[event.id]){
               servers[event.id]=[];
             }
-            id=event.id;
+            console.log("set up");
+            
+            socket.set('id', event.id);
+            console.log(servers[event.id]);
+            for(linkage in servers[event.id]){        
+              linkage.emit('switch',event.url);
+            }
             break;
           }
         }
       });
     });
-    socket.on('switch', function(url){
-      if(id){
-        for(linkage in servers[id]){        
-          linkage.emit('switch',url);
-        }
+    socket.on('switch', function(event){
+      console.log(servers[event.id]);
+      
+      for(linkage in servers[event.id]){        
+        linkage.emit('switch',event.url);
       }
     });
   });
-function browserid_verify(assertion, socket){
-  var options = {
-     host: 'browserid.org',
-     port: 80,
-     path: '/verify',
-     method: 'POST'
-  };
-  var clientCode = 
+function browserid_verify(assertion, name, socket){
   var post = {
   assertion: assertion,
   audience: "local.projectmakeit.com:3000"
   };
   var data = JSON.stringify(post);
+  var options = {
+     host: 'browserid.org',
+     port: 443,
+     path: '/verify',
+     method: 'POST',
+     headers:{
+       "Content-Type": "application/json",
+       "Content-Length": data.length
+     }
+  }; 
   console.log(data);
 
-  var req = http.request(options, function(res) {
+  var req = https.request(options, function(res) {
+    
+    
     console.log('STATUS: ' + res.statusCode);
     console.log('HEADERS: ' + JSON.stringify(res.headers));
     res.setEncoding('utf8');
     res.on('data', function (chunk) {
-      var user = JSON.parse(responseText);
+      console.log(chunk);
+      var user = JSON.parse(chunk);
       var email = user.email;
       if(user.status=="okay"){
         console.log('client verified, email '+email);
@@ -131,14 +165,17 @@ function browserid_verify(assertion, socket){
           var code=randomstring.generate();
           if(!data){
             var id = randomstring.generate();
-            data={"email":email, "id":id, codeset:[code]};
+            data={"email":email, "id":id, codeset:[{code:code, name:name}]};
             idset.update({"email":email},data,{upsert:true},function(err,data){});
             socket.emit('verified',{id:id,code:code,email:email});
           }else{
-            data.codeset.push(code);
-            socket.emit('added',{id:id,code:code,email:email});
+            data.codeset.push({code:code,name:name});
+            console.log(data.id);
+            
+            socket.emit('added',{id:data.id,code:code,email:email});
             idset.update({"email":email},data,{upsert:true},function(err,data){});
           }
+          socket.set('id',data.id);
         });
       }
       console.log('BODY: ' + chunk);
@@ -153,3 +190,5 @@ function browserid_verify(assertion, socket){
   req.write(data);
   req.end();
 }
+  
+

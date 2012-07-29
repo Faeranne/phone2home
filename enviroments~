@@ -1,0 +1,11 @@
+export ROOMID=4fc0350daaa5cd02a2000090
+export USERID=4fd54e59aaa5cd1b38000178
+export AUTH=auth+live+14ab199f1c865920a7d47d7db5e874a388b8427e
+export NICK=tulsabot
+export ROOM=tulsawebdevs
+export DB=tulsatest
+export DBUSER=tulsabottest
+export PASS=login
+export SERVER='localhost'
+export DBSERVER=ds031617.mongolab.com
+export KEY=qwertyuiopqwertyuiop

@@ -1,18 +1,23 @@
+div(id='message')
 script(src="/socket.io/socket.io.js")
 script
-  var socket=io.connect('/phone');
   (function(){
+    var socket=io.connect('/phone');
     if(!localStorage.getItem('id')){
-      var content=document.getElementById('message');
-      content.innerHTML='Please connect to Phone2Home browser.';
+      var message=document.getElementById('message');
+      message.innerHTML='Please connect to Phone2Home browser.';
       return;
     }
     var id = localStorage.getItem('id');
     var code = localStorage.getItem('code');
-    socket.emit('register',{id:id,code:code});
+    socket.emit('setup',{id:id,code:code,url:"#{url}"});
+    console.log("done");
+    
     socket.on('finished', function(){
-      socket.emit('switch',#{url});
-      history.back();
+      socket.emit('switch',{id:id,url:"#{url}"});
+      console.log("switched");
+      
+      //history.back();
     });
   })()
 

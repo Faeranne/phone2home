@@ -4,13 +4,15 @@
  */
 
 
-exports.index = function(req, res){
-  res.render('index', { title: 'Express'});
+exports.browser = function(req, res){
+  res.render('browser', { title: 'Express'});
 };
-exports.control = function(req, res){
-  res.render('control', { title: 'Mobile Connect' });
+exports.mobile = function(req, res){
+  var url = req.params.url;
+  res.render('mobile', { title: 'Mobile Connect', url: url });
 };
-exports.code = function(req, res){
-  var qrcode = req.params.code;
-  res.render('mobile', { title: 'Mobile', qrcode: qrcode });
+exports.mobilesetup = function(req, res){
+  var id = req.params.id;
+  var code = req.params.code;
+  res.render('mobilesetup', { title: 'Mobile', code: code, id: id });
 };

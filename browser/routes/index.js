@@ -7,6 +7,9 @@
 exports.browser = function(req, res){
   res.render('browser', { title: 'Express'});
 };
+exports.browsersetup = function(req, res){
+  res.render('browsersetup', { title: 'Express'});
+};
 exports.mobile = function(req, res){
   var url = req.params.url;
   res.render('mobile', { title: 'Mobile Connect', url: url });
