@@ -88,7 +88,7 @@ var brower = io
       var id = event.id;
       var code = randomstring.generate();
       console.log(id);
-      var url='http://local.projectmakeit.com:3000/phone2home/mobilesetup/'+id+'/'+code+'/'+name+'/';
+      var url=process.env.address+'/phone2home/mobilesetup/'+id+'/'+code+'/'+name+'/';
       QRCode.toDataURL(url, function(err,uri){
         socket.emit('qrcode', uri);
       });
@@ -134,7 +134,7 @@ var phone = io
 function browserid_verify(assertion, name, socket){
   var post = {
   assertion: assertion,
-  audience: "local.projectmakeit.com:3000"
+  audience: process.env.address
   };
   var data = JSON.stringify(post);
   var options = {

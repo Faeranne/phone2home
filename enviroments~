@@ -1,0 +1,4 @@
+export DB=phone2home
+export DBUSER=makeit
+export PASS=hotel66
+export DBSERVER=ds035907.mongolab.com
