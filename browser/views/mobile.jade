@@ -16,8 +16,8 @@ script
     socket.on('finished', function(){
       socket.emit('switch',{id:id,url:"#{url}"});
       console.log("switched");
-      
-      //history.back();
+      document.getElementById('message').innerHTML='Sent!  go Back to continue.';
+      history.back();
     });
   })()
 

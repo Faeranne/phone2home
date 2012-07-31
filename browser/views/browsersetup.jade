@@ -1,13 +1,18 @@
 img(id='qrcode')
 script(src="/socket.io/socket.io.js")
 script(src="https://browserid.org/include.js")
-input(id='name')
+p Device Name: 
+  input(id='name')
+p
 a(href='#', id='browserid', title='Connect with BrowserID')
   img(src='/images/sign_in_red.png', alt='Sign-In')
-a(href='#', id='addphone')
-  Add a phone
-a(href='#', id='remove')
-  Remove this browser
+p
+a(href='#', id='addphone') Add a phone
+p
+a(href='#', id='remove') Remove this browser
+p
+a(href='http://projectmakeit.com:3000/phone2home/browser/') Start browser tab
+
 script
   (function(){
     var socket=io.connect('/browser');
