@@ -7,7 +7,8 @@
     "canvas": "latest",
     "qrcode": "0.2.2",
     "randomstring": "latest",
-    "socket.io": "latest"
+    "socket.io": "latest",
+    "mongodb": "latest"
   },
   "subdomain": "qr-link-test",
   "scripts": {
